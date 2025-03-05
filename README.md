@@ -8,7 +8,7 @@
 
 ## Descripción del Proyecto
 
-Este proyecto tiene como objetivo el desarrollo de un juego en FPGA, específicamente un juego tipo **Pong** o **Destruir Ladrillos**, en el cual el control del juego se realizará a través de una **aplicación móvil** conectada al sistema mediante un módulo **Bluetooth HC-05**. El juego se implementará en una FPGA y se mostrará en una pantalla a través de una salida **VGA**. El objetivo de este diseño es proporcionar una experiencia de juego interactiva sin necesidad de cables adicionales o periféricos complicados, utilizando únicamente la FPGA, el módulo Bluetooth y el teléfono móvil como control.
+Este proyecto tiene como objetivo el desarrollo de un juego en FPGA, específicamente un juego tipo **Pong**, en el cual el control del juego se realizará a través de una **aplicación móvil** conectada al sistema mediante un módulo **Bluetooth HC-05**. El juego se implementará en una FPGA y se mostrará en una pantalla a través de una salida **VGA**. El objetivo de este diseño es proporcionar una experiencia de juego interactiva sin necesidad de cables adicionales o periféricos complicados, utilizando únicamente la FPGA, el módulo Bluetooth y el teléfono móvil como control.
 
 ## Especificación Detallada del Sistema
 
@@ -28,14 +28,14 @@ Este proyecto tiene como objetivo el desarrollo de un juego en FPGA, específica
    - **Conexión**: La conexión Bluetooth se gestionará mediante una aplicación desarrollada por el usuario, la cual se encargará de enviar los datos de control a la FPGA.
 
 4. **Pantalla VGA**
-   - **Funcionalidad**: La pantalla VGA se utilizará para mostrar la salida gráfica del juego, que incluye los objetos (paddle, bola, ladrillos) y el puntaje.
+   - **Funcionalidad**: La pantalla VGA se utilizará para mostrar la salida gráfica del juego, que incluye los objetos (paddle, bola).
    - **Conexión**: La FPGA generará las señales necesarias para la salida VGA, con la correcta sincronización de las señales HSync y VSync para visualizar el juego en la pantalla.
 
 ### Funcionalidad del Juego
 
-El juego será un clásico tipo **Pong** o **Destruir Ladrillos** en el que el jugador controlará un paddle en la parte inferior de la pantalla, moviéndolo hacia la izquierda o derecha para evitar que la pelota (o el ladrillo) se caiga o se destruya. El juego deberá tener características como:
+El juego será un clásico tipo **Pong** en el que el jugador controlará un paddle en la parte lateral de la pantalla, moviéndolo hacia arriba o abajp para evitar que la pelota se salga o se destruya. El juego deberá tener características como:
 
-- Movimiento de los objetos en la pantalla (bola, paddle, ladrillos).
+- Movimiento de los objetos en la pantalla (bola, paddle).
 - Detención de la pelota al llegar a los límites o interacción con los objetos.
 - Puntaje en la pantalla.
 - Interactividad mediante el control del teléfono móvil.
@@ -46,7 +46,25 @@ El juego será un clásico tipo **Pong** o **Destruir Ladrillos** en el que el j
 
 1. **FPGA (Plataforma de Implementación)**
    - Descripción Funcional: La FPGA implementará toda la lógica del juego, incluida la creación de la interfaz de usuario (gráficos en la pantalla VGA) y la gestión de las entradas del control (a través de Bluetooth).
-   - Sistema de Caja Negra: La FPGA recibe señales de entrada desde el módulo Bluetooth, genera las señales VGA y maneja la lógica del juego (control de la pelota, el paddle y el puntaje).
+   - Sistema de Caja Negra: La FPGA recibe señales de entrada desde el módulo Bluetooth, genera las señales VGA y maneja la lógica del juego (control de la pelota, el paddle).
+
+
+```plaintext
+┌──────────┐      ┌─────────────┐      ┌─────────────┐
+│   TOP    │◄────►│  uart_rx    │      │    VGA      │
+│  (Main)  │      └─────────────┘      │ (Video Out) │
+│          │      ┌─────────────┐      │             │
+│          │◄────►│  ball_logic │◄────►│             │
+└──────────┘      └─────────────┘      └─────────────┘
+                        ▲  │
+                        ┼  ┼
+                        │  │                  
+┌──────────────┐  ┌───────────────┐   
+│ rectangle_1  │  │ rectangle_2   │   
+│ (Jugador 1)  │  │ (Jugador 2 IA)│   
+└──────────────┘  └───────────────┘   
+```
+
 
 2. **Módulo Bluetooth HC-05**
    - Descripción Funcional: El HC-05 se encarga de la transmisión y recepción de datos entre el teléfono móvil y la FPGA. El teléfono enviará comandos que serán interpretados por la FPGA para mover el paddle y ajustar otros aspectos del juego.
