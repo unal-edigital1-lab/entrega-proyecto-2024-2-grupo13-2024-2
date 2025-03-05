@@ -238,8 +238,6 @@ module vga(
 
 
 
-// Source : https://timetoexplore.net/blog/arty-fpga-vga-verilog-01
-
 	localparam
 	HPIXELS = 640,
 	HA = HPIXELS - 1,									// Hor. active area (0 to 639 = 640 pixels)
@@ -253,49 +251,28 @@ module vga(
 	VSYNC = VFP + 2,									// Vert. sync end position
 	VBP = VSYNC + 31;									// Vert. back porch end position
 
-	// Instead of creating a separate 25-MHz clock domain and violating
-	// the "synchronous design methodology", we generate a 25-MHz enable tick
-	// to enable or pause the counting.
-	
-	// The tick is also routed to the p_tick port as an output signal
-	// to coordinate operation of the pixel generation circuit.
-	
-	// Mod-2 counter
-
 	reg		mod2_r;
 	wire		mod2_next;
 	wire		ptick_w;
 	
-	// Sync counters
-
 	reg  [9:0]	hcount, hcount_next;
 	reg  [9:0]	vcount, vcount_next;
 	
-	// Sync output buffers
-	
-	// To remove potential glitches, output buffers are inserted for the hsync and vsync signals. This leads 
-	// to a one-clock-cycle delay. We also add a similar buffer for the rgb signal in the pixel 
-	// generation circuit to compensate for the delay.
+	leads 
+
 	
 	reg			vsync_r, hsync_r;
 	wire			vsync_next, hsync_next;
 	
-	// RGB signal buffer
 	
 	reg			red_r, green_r, blue_r;
 
-	// Frame output buffered
 	
 	reg			ftick_r;
 	wire			ftick_next;
 	
-	// Status signals
 
 	wire			h_end, v_end;
-
-	// Body
-	
-	// Registers
 
 always @ (posedge clk or posedge reset) begin
 	if  (reset) begin
@@ -330,22 +307,15 @@ always @ (posedge clk or posedge reset) begin
 	end
 end
 
-	// Mod-2 circuit to generate the 25 MHz tick
 	
 	assign mod2_next = ~mod2_r;
 	assign ptick_w = mod2_r;
 
-	// Status  signals
-
-	// End of horizontal line counter (799)
 
 	assign h_end = (hcount == HBP);
 
-	// End of vertical (524)
-
 	assign v_end = (vcount == VBP);
 
-	// Next-state logic of mod-800 horizontal sync counter
 
 	always @(*) begin
 		if  (ptick_w)  // 25 MHz pixel tick
@@ -357,7 +327,6 @@ end
 			hcount_next = hcount;
 	end
 
-	// Next-state logic of mod-525 vertical sync counter
 
 	always @(*) begin
 		if (ptick_w & h_end)	// 25 MHz pixel tick and end of line
@@ -369,25 +338,18 @@ end
 			vcount_next = vcount;
 	end
 
-	// Horizontal and vertical sync, and f_tick, buffered to avoid glitches
-	
-	// hsync_next reset between 656 and 752
-	
+
 	assign	hsync_next = ~((hcount > HFP) && (hcount <= HSYNC));
 
-	// vsync_next reset between 491 and 493
 	
 	assign	vsync_next = ~((vcount > VFP) && (vcount <= VSYNC));
 	
-	// f_tick_next set when the current position enters the blanking area
 	
 	assign	ftick_next = (hcount == HPIXELS) && (vcount == VPIXELS);
 
-	// active when the current position is inside the visible area
 	
 	assign	active = (hcount <= HA) && (vcount <= VA);
 
-	// Outputs
 
 	assign	hsync = hsync_r;
 	assign	vsync = vsync_r;
@@ -400,4 +362,116 @@ end
 	assign	green = active ? green_r : 1'b0;
 	assign	blue = active ? blue_r : 1'b0;
 endmodule
+```
+
+
+### TOP y uart_rx
+
+Este sistema implementa un **receptor UART** en para recibir datos serie y controlar un LED en la FPGA según los comandos recibidos.  
+
+#### ⚙️ **Funcionamiento**  
+1. El módulo `uart_rx` **recibe datos serie** mediante UART, detecta el bit de inicio y almacena el byte recibido.  
+2. Cuando se recibe un byte completo, activa la señal `rx_ready`.  
+3. El módulo `TOP` **lee el dato recibido** y lo compara:  
+   - Si es `'1'` (`8'h31` en ASCII), **enciende el LED**.  
+   - Si es `'0'` (`8'h30` en ASCII), **apaga el LED**.  
+4. Ignora cualquier otro dato y mantiene el estado del LED.  
+
+
+```verilog
+
+
+module TOP(
+    input wire clk,               // Reloj de 50 MHz de la FPGA
+    input wire rx,                // Entrada de datos UART (RX)
+    output reg led               // Salida para el LED
+);
+
+    // Definir parámetros de configuración UART
+    parameter BAUD_RATE = 38400;   // Baud rate
+    parameter CLOCK_FREQ = 50000000;  // Frecuencia del reloj de la FPGA (50 MHz)
+    parameter DIVISOR = CLOCK_FREQ / BAUD_RATE; // Divisor de frecuencia para la UART
+
+    wire [7:0] rx_data;            // Almacena el dato recibido por UART
+    wire rx_ready;                 // Indicador de que un byte ha sido recibido
+
+    // Módulo para la recepción UART
+    uart_rx #(
+        .DIVISOR(DIVISOR)
+    ) uart_receiver (
+        .clk(clk),
+        .rx(rx),
+        .rx_data(rx_data),    // Conectar la señal rx_data
+        .rx_ready(rx_ready)   // Conectar la señal rx_ready
+    );
+
+    // Control de LEDs basado en los datos recibidos
+    always @(posedge clk) begin
+        if (rx_ready) begin
+            case (rx_data)
+                8'h31: led <= 1;  // Comando '1', encender LED
+                8'h30: led <= 0;  // Comando '0', apagar LED
+                default: led <= led; // Mantener el estado actual
+            endcase
+        end
+    end
+
+endmodule
+
+
+
+// Módulo para la recepción de datos UART
+module uart_rx #(
+    parameter DIVISOR = 5208  // Divisor de frecuencia para el baud rate
+)(
+    input wire clk,
+    input wire rx,
+    output reg [7:0] rx_data,
+    output reg rx_ready
+);
+
+    reg [15:0] clk_counter;   // Contador de reloj para muestreo de bits
+    reg [3:0] bit_count;      // Contador de bits recibidos
+    reg [7:0] shift_reg;      // Registro de desplazamiento para almacenar el byte recibido
+    reg rx_sync1, rx_sync2;   // Registros de sincronización de la señal rx
+    reg rx_state;             // Estado para controlar la recepción
+
+    always @(posedge clk) begin
+        // Sincronización de la señal rx para evitar metastabilidad
+        rx_sync1 <= rx;
+        rx_sync2 <= rx_sync1;
+
+        // Muestreo de la señal UART
+        if (clk_counter == DIVISOR - 1) begin
+            clk_counter <= 0;  // Reinicia el contador
+            if (rx_state == 0) begin
+                // Espera el bit de inicio (debemos detectar la señal baja)
+                if (rx_sync2 == 0) begin
+                    rx_state <= 1;  // Cambiar a estado de recepción
+                    bit_count <= 0;
+                    shift_reg <= 0;
+                end
+            end else begin
+                // Continuar con la recepción de los datos
+                shift_reg <= {rx_sync2, shift_reg[7:1]};  // Desplaza el registro
+                bit_count <= bit_count + 1;
+
+                if (bit_count == 8) begin
+                    rx_data <= shift_reg; // Almacena el byte recibido
+                    rx_ready <= 1;        // Señala que los datos están listos
+                    rx_state <= 0;        // Regresa al estado de espera
+                end
+            end
+        end else begin
+            clk_counter <= clk_counter + 1;
+        end
+
+        // Reseteo de rx_ready al final del ciclo
+        if (rx_ready) begin
+            rx_ready <= 0; // Resetea la señal de datos listos
+        end
+    end
+
+endmodule
+
 ```
