@@ -475,3 +475,212 @@ module uart_rx #(
 endmodule
 
 ```
+
+
+### ball_logic
+
+- este modulo es el encargado de la pelota en el juego, las colisiones con los objetos , etc
+
+```verilog
+module ball_logic(
+    input clk,                 // Pulso de 60 Hz
+    input reset,               // Reset
+    input [9:0] rectangle1_vpos, // Posición vertical de la primera raqueta
+    input [9:0] rectangle2_vpos, // Posición vertical de la segunda raqueta
+    input [9:0] rectangle_width, // Ancho de las raquetas
+    input [9:0] rectangle_height, // Alto de las raquetas
+    input [9:0] obstacle1_xpos,  // Posición horizontal del primer obstáculo
+    input [9:0] obstacle1_ypos,  // Posición vertical del primer obstáculo
+    input [9:0] obstacle2_xpos,  // Posición horizontal del segundo obstáculo
+    input [9:0] obstacle2_ypos,  // Posición vertical del segundo obstáculo
+    input [9:0] obstacle3_xpos,  // Posición horizontal del tercer obstáculo
+    input [9:0] obstacle3_ypos,  // Posición vertical del tercer obstáculo
+    output reg [9:0] square_hpos, // Posición horizontal de la pelota
+    output reg [9:0] square_vpos, // Posición vertical de la pelota
+    output reg move_up,        // Bandera de movimiento vertical
+    output reg move_right,     // Bandera de movimiento horizontal
+    output reg reset_game      // Señal para resetear todo
+);
+
+    // Parámetros del cuadrado (pelota)
+    localparam SQUARE_SIZE = 6;  // Tamaño de la pelota (6x6)
+    localparam SCREEN_WIDTH = 640;
+    localparam SCREEN_HEIGHT = 480;
+    localparam OBSTACLE_SIZE = 6;  // Tamaño de los obstáculos
+
+    reg [31:0] random_counter;  // Contador para generar aleatoriedad
+    reg random_vertical;        // Dirección vertical aleatoria
+    reg random_horizontal;      // Dirección horizontal aleatoria
+
+    // Lógica para contar y generar aleatoriedad
+    always @(posedge clk or posedge reset) begin
+        if (reset) begin
+            // Inicialización
+            square_hpos <= SCREEN_WIDTH / 2 - SQUARE_SIZE / 2;  // Posición horizontal centrada
+            square_vpos <= (random_counter[9:0] % (SCREEN_HEIGHT - SQUARE_SIZE));  // Posición vertical aleatoria
+            random_horizontal <= (random_counter[10] % 2);  // Aleatorio 0 o 1
+            move_right <= random_horizontal;  // Si es 1, se mueve a la derecha, si es 0, a la izquierda
+            random_vertical <= (random_counter[11] % 2);  // Aleatorio 0 o 1
+            move_up <= random_vertical;  // Si es 1, se mueve hacia arriba, si es 0, hacia abajo
+            reset_game <= 0;
+        end else begin
+            // Aumentar el contador para cambiar la aleatoriedad
+            random_counter <= random_counter + 1;
+
+            // Lógica para mover la pelota (arriba/abajo)
+            if (move_up == 0) begin
+                if (square_vpos < (SCREEN_HEIGHT - SQUARE_SIZE)) begin
+                    square_vpos <= square_vpos + 2;
+                end else begin
+                    move_up <= 1;  // Cambiar a movimiento hacia arriba
+                end
+            end else begin
+                if (square_vpos > 0) begin
+                    square_vpos <= square_vpos - 2;
+                end else begin
+                    move_up <= 0;  // Cambiar a movimiento hacia abajo
+                end
+            end
+
+            // Lógica para mover la pelota (izquierda/derecha)
+            if (move_right == 0) begin
+                if (square_hpos > 0) begin
+                    square_hpos <= square_hpos - 2;
+                end else begin
+                    move_right <= 1;  // Cambiar a movimiento hacia la derecha
+                end
+            end else begin
+                if (square_hpos < (SCREEN_WIDTH - SQUARE_SIZE)) begin
+                    square_hpos <= square_hpos + 2;
+                end else begin
+                    move_right <= 0;  // Cambiar a movimiento hacia la izquierda
+                end
+            end
+
+            // Detectar colisión con la raqueta izquierda
+            if (square_hpos <= rectangle_width && 
+                (square_vpos + SQUARE_SIZE >= rectangle1_vpos) && 
+                (square_vpos <= rectangle1_vpos + rectangle_height)) begin
+                move_right <= 1; // La pelota rebota hacia la derecha
+            end
+
+            // Detectar colisión con la raqueta derecha
+            if (square_hpos >= (SCREEN_WIDTH - rectangle_width - SQUARE_SIZE) && 
+                (square_vpos + SQUARE_SIZE >= rectangle2_vpos) && 
+                (square_vpos <= rectangle2_vpos + rectangle_height)) begin
+                move_right <= 0; // La pelota rebota hacia la izquierda
+            end
+
+            // Detectar colisión con los bordes de la pantalla (izquierda o derecha)
+            if (square_hpos <= 0 || square_hpos >= (SCREEN_WIDTH - SQUARE_SIZE)) begin
+                reset_game <= 1;  // Activar reset del juego
+            end else begin
+                reset_game <= 0;  // No activar reset
+            end
+
+        end
+    end
+endmodule
+
+```
+
+
+### rectangle_logic
+
+- los movimiento que realiza este modulo, esta asociado con el uart_rx que ya vimos
+
+```verilog
+module rectangle_logic(
+    input clk,                    // Pulso de 60 Hz
+    input reset,                  // Reset
+    input move_left,              // Señal para mover hacia la izquierda
+    input move_right,             // Señal para mover hacia la derecha
+    output reg [9:0] rectangle_vpos // Posición vertical del rectángulo
+);
+
+    // Parámetros del rectángulo (ahora será vertical)
+    localparam RECTANGLE_WIDTH = 20;   // Cambiamos el ancho a altura
+    localparam RECTANGLE_HEIGHT = 100; // Cambiamos la altura a ancho
+    localparam SCREEN_HEIGHT = 480;    // Altura de la pantalla VGA
+    localparam STEP_SIZE = 3;          // Avance de 3 píxeles
+
+    // Lógica del movimiento del rectángulo (ahora se mueve verticalmente)
+    always @(posedge clk or posedge reset) begin
+        if (reset) begin
+            rectangle_vpos <= SCREEN_HEIGHT / 2 - RECTANGLE_HEIGHT / 2;  // Centrado en la parte superior
+        end else begin
+            // Mover el rectángulo hacia abajo si la señal move_right está activa
+            if (move_right) begin
+                // Mover hacia abajo solo si no está al borde inferior
+                if (rectangle_vpos <= (SCREEN_HEIGHT - RECTANGLE_HEIGHT - STEP_SIZE)) begin
+                    rectangle_vpos <= rectangle_vpos + STEP_SIZE;  // Ahora se mueve 3 píxeles hacia abajo
+                end else begin
+                    rectangle_vpos <= SCREEN_HEIGHT - RECTANGLE_HEIGHT;  // Limitar al borde inferior
+                end
+            end
+            // Mover el rectángulo hacia arriba si la señal move_left está activa
+            else if (move_left) begin
+                // Mover hacia arriba solo si no está al borde superior
+                if (rectangle_vpos >= STEP_SIZE) begin
+                    rectangle_vpos <= rectangle_vpos - STEP_SIZE;  // Ahora se mueve 3 píxeles hacia arriba
+                end else begin
+                    rectangle_vpos <= 0;  // Limitar al borde superior
+                end
+            end
+        end
+    end
+endmodule
+
+```
+
+### rectangle_logic2
+
+El módulo rectangle_logic2 mueve un rectángulo de forma vertical (de arriba a abajo) siguiendo la posición vertical de una pelota, pero solo si la pelota se mueve a la derecha y está más allá de un umbral específico (la mitad de la pantalla).
+
+- Movimiento del rectángulo: Si la pelota está por encima del rectángulo, se mueve hacia arriba. Si está por debajo, se mueve hacia abajo.
+    
+- Restricciones: El rectángulo no puede salir de los bordes de la pantalla (no puede ir por encima de la parte superior ni más allá de la parte inferior).
+    
+- Condición de movimiento: El rectángulo solo se mueve cuando la pelota está a la derecha del umbral (MOVE_THRESHOLD), es decir, cuando la pelota está en la mitad derecha de la pantalla.
+
+```verilog
+module rectangle_logic2(
+    input clk,                    // Pulso de 60 Hz
+    input reset,                  // Reset
+    input [9:0] square_vpos,      // Posición vertical de la pelota
+    input [9:0] square_hpos,      // Posición horizontal de la pelota
+    input move_right,             // Indicador de si la pelota se mueve a la derecha
+    output reg [9:0] rectangle_vpos // Posición vertical del rectángulo
+);
+
+    // Parámetros del rectángulo (ahora será vertical)
+    localparam RECTANGLE_WIDTH = 20;   // Cambiamos el ancho a altura
+    localparam RECTANGLE_HEIGHT = 100; // Cambiamos la altura a ancho
+    localparam SCREEN_HEIGHT = 480;    // Altura de la pantalla VGA
+    localparam SCREEN_WIDTH = 640;     // Ancho de la pantalla VGA
+    localparam MOVE_THRESHOLD = 320;  // Umbral para que la raqueta se mueva (50% de la pantalla)
+
+    // Lógica del movimiento del rectángulo (ahora se mueve de arriba a abajo)
+    always @(posedge clk or posedge reset) begin
+        if (reset) begin
+            rectangle_vpos <= 0;  // Posición inicial en la parte superior
+        end else if (move_right && square_hpos >= MOVE_THRESHOLD) begin
+            // La raqueta sigue la posición de la pelota, pero no puede salir de los bordes de la pantalla
+            if (square_vpos < rectangle_vpos) begin
+                // Mover hacia arriba si la pelota está por encima de la raqueta, pero no pasar el borde superior
+                if (rectangle_vpos > 0) begin
+                    rectangle_vpos <= rectangle_vpos - 5;  // Mover hacia arriba (5 píxeles por ciclo)
+                end
+            end else if (square_vpos > rectangle_vpos) begin
+                // Mover hacia abajo si la pelota está por debajo de la raqueta, pero no pasar el borde inferior
+                if (rectangle_vpos < (SCREEN_HEIGHT - RECTANGLE_HEIGHT)) begin
+                    rectangle_vpos <= rectangle_vpos + 5;  // Mover hacia abajo (5 píxeles por ciclo)
+                end
+            end
+            // Si la pelota está a la misma altura, la raqueta no se mueve
+        end
+    end
+endmodule
+
+```
+
