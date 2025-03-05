@@ -687,6 +687,10 @@ endmodule
 
 ```
 
+
+###
+![Texto alternativo](img/fpga_3.png)
+
 ###
 ![Texto alternativo](img/fpga_2.png)
 
