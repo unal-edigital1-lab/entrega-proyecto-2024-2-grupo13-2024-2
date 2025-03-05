@@ -1,9 +1,13 @@
-[![Open in Visual Studio Code](https://classroom.github.com/assets/open-in-vscode-2e0aaae1b6195c2367325f4f02e2d04e9abb55f0b24a779b69b11b9e10269abc.svg)](https://classroom.github.com/online_ide?assignment_repo_id=17800245&assignment_repo_type=AssignmentRepo)
-# Entrega 1 proyecto: Juego Arcade
+
+# proyecto: Juego Arcade ( Pong )
 
 * Jesus Antonio Lopez Trigozo
 
 # Proyecto Final: Implementación de Juego con Control Bluetooth en FPGA
+
+## video demostrativo
+
+[![Ver el video](https://img.youtube.com/vi/0h3I9Lt0ql8/0.jpg)](https://www.youtube.com/watch?v=0h3I9Lt0ql8)
 
 ## Descripción del Proyecto
 
@@ -366,7 +370,7 @@ endmodule
 
 ### TOP y uart_rx
 
-Este sistema implementa un **receptor UART** en para recibir datos serie y controlar un LED en la FPGA según los comandos recibidos.  
+Este sistema implementa un **receptor UART** para recibir datos serie y controlar un LED en la FPGA según los comandos recibidos.  
 
 #### ⚙️ **Funcionamiento**  
 1. El módulo `uart_rx` **recibe datos serie** mediante UART, detecta el bit de inicio y almacena el byte recibido.  
@@ -690,6 +694,3 @@ endmodule
 ![Texto alternativo](img/fpga_1.png)
 
 
-## video demostrativo
-
-[![Ver el video](https://img.youtube.com/vi/0h3I9Lt0ql8/0.jpg)](https://www.youtube.com/watch?v=0h3I9Lt0ql8)
