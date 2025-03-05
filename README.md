@@ -2,7 +2,6 @@
 # Entrega 1 proyecto: Juego Arcade
 
 * Jesus Antonio Lopez Trigozo
-* Julian Camilo Casallas
 
 # Proyecto Final: Implementación de Juego con Control Bluetooth en FPGA
 
