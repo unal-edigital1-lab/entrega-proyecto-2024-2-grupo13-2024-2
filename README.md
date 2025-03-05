@@ -61,7 +61,7 @@ El juego será un clásico tipo **Pong** en el que el jugador controlará un pad
         ▼          ▼                      ▼       ▼
 ┌──────────┐    ┌──────────────┐    ┌─────────────────────┐
 │ Bluetooth│    │ rectangle_1  │    │ rectangle_2         │
-│(uart_rx) │---▶│ (Jugador 1)  │    │ (Jugador 2 autónomo)│
+│(uart_rx) │--▶│ (Jugador 1)  │    │ (Jugador 2 autónomo)│
 └──────────┘    └──────────────┘    └─────────────────────┘
   
 ```
