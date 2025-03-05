@@ -45,6 +45,17 @@ El juego será un clásico tipo **Pong** en el que el jugador controlará un pad
 
 ## Plan Inicial de la Arquitectura del Sistema
 
+```plaintext 
++---------+                +-------------------+                  +----------------+
+|         |------------->  |                   | <--------------> |                |
+| USUARIO |    Bluetooth   | LOGICA EN EL FPGA |    CABLE VGA     |   Pantalla TV  |
+|         |                |                   |                  |                |
++---------+                +-------------------+                  +----------------+
+  
+```
+
+## Interacción entre los módulos
+
 ```plaintext
        ┌──────────────────────────────┐
        │          vga_demo            │───────────┐
