@@ -685,7 +685,7 @@ endmodule
 ```
 
 ###
-![Texto alternativo](img/fgpa_1.png)
+![Texto alternativo](img/fpga_1.png)
 
 
 ## video demostrativo
